@@ -115,24 +115,12 @@ class KubeIngressProxy(Proxy):
         as `__init__` can't be marked as async.
 
         Since JupyterHub won't await this method, we ensure the async methods
-        JupyterHub may call on this object will await this method before
+        that relies on this initialization logic will awaits it before
         continuing. To do this, we decorate them with `_await_async_init`.
 
-        But, how do we figure out the methods to decorate? Likely only those
-        exposed by the base class that JupyterHub would know about. The base
-        class is Proxy, as declared in proxy.py:
-        https://github.com/jupyterhub/jupyterhub/blob/HEAD/jupyterhub/proxy.py.
-
-        From the Proxy class docstring we can conclude that the following
-        methods, if implemented, could be what we need to decorate with
-        _await_async_init:
-
-          - get_all_routes (implemented and decorated)
-          - add_route (implemented and decorated)
-          - delete_route (implemented and decorated)
-          - start
-          - stop
-          - get_route
+        The methods that relies on this async init logic are the methods relying
+        on the the properties we set here: `core_api`, `extension_api`,
+        `ingress_reflector`, `service_reflector`, `endpoint_reflector`.
         """
         await load_config(caller=self)
         self.core_api = shared_client('CoreV1Api')

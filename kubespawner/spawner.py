@@ -203,30 +203,14 @@ class KubeSpawner(Spawner):
         as it can't be marked as async.
 
         Since JupyterHub won't await this method, we ensure the async methods
-        JupyterHub may call on this object will await this method before
-        continuing. To do this, we decorate them with `_await_async_init`.
+        that relies on this init logic will awaits it before continuing. To do
+        this, we decorate them with `_await_async_init`.
 
-        But, how do we figure out the methods to decorate? Likely only those
-        exposed by the base class that JupyterHub would know about. The base
-        class is Spawner, as declared in spawner.py:
-        https://github.com/jupyterhub/jupyterhub/blob/HEAD/jupyterhub/spawner.py.
-
-        From the Proxy class docstring we can conclude that the following
-        methods, if implemented, could be what we need to decorate with
-        _await_async_init:
-
-          - load_state (implemented)
-          - get_state (implemented)
-          - start (implemented and decorated)
-          - stop (implemented and decorated)
-          - poll (implemented and decorated)
-
-        Out of these, it seems that only `start`, `stop`, and `poll` would need
-        the initialization logic in this method to have completed.
-
-        This is slightly complicated by the fact that `start` is already a
-        synchronous method that returns a future, so where we want the
-        decorator is actually on the async `_start` that `start` calls.
+        The methods that relies on this async init logic are the methods
+        directly relying on the the `self.api` property we set here and the
+        `_start_reflector` method. The latter is because the Reflector objects
+        relies on a global k8s configuration we await to be loaded in this async
+        init.
         """
         await load_config(caller=self)
         self.api = shared_client("CoreV1Api")
@@ -2050,7 +2034,6 @@ class KubeSpawner(Spawner):
         if 'pod_name' in state:
             self.pod_name = state['pod_name']
 
-    @_await_async_init
     async def poll(self):
         """
         Check if the pod is still running.
@@ -2208,6 +2191,7 @@ class KubeSpawner(Spawner):
                 break
             await asyncio.sleep(1)
 
+    @_await_async_init
     async def _start_reflector(
         self,
         kind=None,
@@ -2306,6 +2290,7 @@ class KubeSpawner(Spawner):
 
     _last_event = None
 
+    @_await_async_init
     async def _make_create_pod_request(self, pod, request_timeout):
         """
         Make an HTTP request to create the given pod
@@ -2344,6 +2329,7 @@ class KubeSpawner(Spawner):
             # We tell exponential_backoff to retry
             return False
 
+    @_await_async_init
     async def _make_create_pvc_request(self, pvc, request_timeout):
         # Try and create the pvc. If it succeeds we are good. If
         # returns a 409 indicating it already exists we are good. If
@@ -2395,6 +2381,7 @@ class KubeSpawner(Spawner):
             else:
                 raise
 
+    @_await_async_init
     async def _ensure_not_exists(self, kind, name):
         """Ensure a resource does not exist
 
@@ -2441,6 +2428,7 @@ class KubeSpawner(Spawner):
         # if we got here, resource still exists, try again
         return False
 
+    @_await_async_init
     async def _make_create_resource_request(self, kind, manifest):
         """Make an HTTP request to create the given resource
 
@@ -2467,7 +2455,6 @@ class KubeSpawner(Spawner):
         else:
             return True
 
-    @_await_async_init
     async def _start(self):
         """Start the user's pod"""
 
@@ -2612,6 +2599,7 @@ class KubeSpawner(Spawner):
 
         return self._get_pod_url(pod)
 
+    @_await_async_init
     async def _make_delete_pod_request(
         self, pod_name, delete_options, grace_seconds, request_timeout
     ):
@@ -2647,6 +2635,7 @@ class KubeSpawner(Spawner):
             else:
                 raise
 
+    @_await_async_init
     async def _make_delete_pvc_request(self, pvc_name, request_timeout):
         """
         Make an HTTP request to delete the given PVC
@@ -2677,7 +2666,6 @@ class KubeSpawner(Spawner):
             else:
                 raise
 
-    @_await_async_init
     async def stop(self, now=False):
         delete_options = client.V1DeleteOptions()
 
@@ -2867,6 +2855,7 @@ class KubeSpawner(Spawner):
                 ", ".join(map(str, sorted(unrecognized_keys))),
             )
 
+    @_await_async_init
     async def _ensure_namespace(self):
         ns = make_namespace(self.namespace)
         api = self.api
