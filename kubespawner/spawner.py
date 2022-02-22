@@ -208,6 +208,7 @@ class KubeSpawner(Spawner):
 
         The methods that relies on this async init logic are the methods
         directly relying on the the `self.api` property we set here and the
+        `_start_reflector` method - as well as the properties set via the
         `_start_reflector` method. The latter is because the Reflector objects
         relies on a global k8s configuration we await to be loaded in this async
         init.
@@ -2034,6 +2035,7 @@ class KubeSpawner(Spawner):
         if 'pod_name' in state:
             self.pod_name = state['pod_name']
 
+    @_await_async_init
     async def poll(self):
         """
         Check if the pod is still running.
@@ -2130,6 +2132,7 @@ class KubeSpawner(Spawner):
                 events.append(event)
         return events
 
+    @_await_async_init
     async def progress(self):
         """
         This function is reporting back the progress of spawning a pod until
@@ -2455,6 +2458,7 @@ class KubeSpawner(Spawner):
         else:
             return True
 
+    @_await_async_init
     async def _start(self):
         """Start the user's pod"""
 
@@ -2666,6 +2670,7 @@ class KubeSpawner(Spawner):
             else:
                 raise
 
+    @_await_async_init
     async def stop(self, now=False):
         delete_options = client.V1DeleteOptions()
 
