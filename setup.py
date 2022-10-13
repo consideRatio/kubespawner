@@ -16,7 +16,7 @@ setup(
     install_requires=[
         'escapism',
         'python-slugify',
-        'jupyterhub>=1.3.0',
+        'jupyterhub>=1.2.0',
         'jinja2',
         'kubernetes_asyncio>=19.15.1',
         'urllib3',
