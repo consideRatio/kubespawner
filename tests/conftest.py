@@ -31,6 +31,7 @@ from kubernetes_asyncio.config import load_kube_config
 from kubernetes_asyncio.watch import Watch
 from traitlets.config import Config
 
+from kubespawner import KubeSpawner
 from kubespawner.clients import shared_client
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -623,3 +624,16 @@ async def exec_python(kube_client, kube_ns):
     pod = await create_resource(kube_client, kube_ns, "pod", pod_manifest)
 
     yield partial(_exec_python_in_pod, kube_client, kube_ns, pod_name)
+
+
+@pytest.fixture(scope="function")
+def reset_pod_reflector():
+    pods_reflector = KubeSpawner.reflectors["pods"]
+    KubeSpawner.reflectors["pods"] = None
+    if pods_reflector:
+        asyncio.ensure_future(pods_reflector.stop())
+    yield
+    pods_reflector = KubeSpawner.reflectors["pods"]
+    KubeSpawner.reflectors["pods"] = None
+    if pods_reflector:
+        asyncio.ensure_future(pods_reflector.stop())
