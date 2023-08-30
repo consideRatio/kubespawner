@@ -3134,7 +3134,7 @@ class KubeSpawner(Spawner):
         """
         Apply set of overrides onto the current spawner instance
 
-        spawner_overrides is a dict with key being the name of the traitlet
+        spawner_override is a dict with key being the name of the traitlet
         to override, and value is either a callable or the value for the
         traitlet. If the value is a dictionary, it is *merged* with the
         existing value (rather than replaced). Callables are called with
